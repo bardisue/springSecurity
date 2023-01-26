@@ -33,6 +33,12 @@ import javax.sql.DataSource;
 public class WebSecurityConfigure {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
+    private final DataSource dataSource;
+
+    public WebSecurityConfigure(DataSource dataSource){
+        this.dataSource = dataSource;
+    }
+
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer(){
         return web -> web.ignoring().antMatchers("/assets/**", "/h2-console/**");
