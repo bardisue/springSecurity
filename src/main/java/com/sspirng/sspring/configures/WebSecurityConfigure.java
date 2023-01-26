@@ -1,19 +1,25 @@
 package com.sspirng.sspring.configures;
 
+import com.sspirng.sspring.user.UserService;
 import org.apache.catalina.Context;
 import org.apache.catalina.connector.Connector;
 import org.apache.tomcat.util.descriptor.web.SecurityCollection;
 import org.apache.tomcat.util.descriptor.web.SecurityConstraint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.config.annotation.web.configurers.RememberMeConfigurer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -33,10 +39,11 @@ import javax.sql.DataSource;
 public class WebSecurityConfigure {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final DataSource dataSource;
+    private UserService userService;
 
-    public WebSecurityConfigure(DataSource dataSource){
-        this.dataSource = dataSource;
+    @Autowired
+    public void setUserService(UserService userService) {
+        this.userService = userService;
     }
 
     @Bean
@@ -45,36 +52,29 @@ public class WebSecurityConfigure {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(DataSource dataSource){
-        JdbcDaoImpl jdbcDao = new JdbcDaoImpl();
-        jdbcDao.setDataSource(dataSource);
-        jdbcDao.setEnableAuthorities(false);
-        jdbcDao.setEnableGroups(true);
-        jdbcDao.setUsersByUsernameQuery(
-                "SELECT " +
-                        "login_id, passwd, true " +
-                        "FROM " +
-                        "USERS " +
-                        "WHERE " +
-                        "login_id = ?"
-        );
-        jdbcDao.setGroupAuthoritiesByUsernameQuery(
-                "SELECT " +
-                        "u.login_id, g.name, p.name " +
-                        "FROM " +
-                        "users u JOIN groups g ON u.group_id = g.id " +
-                        "LEFT JOIN group_permission gp ON g.id = gp.group_id " +
-                        "JOIN permissions p ON p.id = gp.permission_id " +
-                        "WHERE " +
-                        "u.login_id = ?"
-        );
-        return jdbcDao;
+    public UserDetailsService userDetailsService() {
+        return this.userService;
+    }
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+
+        authProvider.setUserDetailsService(userDetailsService());
+        authProvider.setPasswordEncoder(passwordEncoder());
+
+        return authProvider;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
+    
 
     @Bean
     public AccessDeniedHandler accessDeniedHandler(){
@@ -111,6 +111,7 @@ public class WebSecurityConfigure {
                 .rememberMe()
                 .rememberMeParameter("remember-me")
                 .tokenValiditySeconds(300)
+                .userDetailsService(userService)
                 .and()
                 /**
                  * 로그아웃 설정

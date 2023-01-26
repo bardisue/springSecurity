@@ -21,8 +21,7 @@ spring:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+      hibernate.dialect: org.hibernate.dialect.H2Dialect
   datasource:
     driver-class-name: org.h2.Driver
     url: "jdbc:h2:mem:spring_security;MODE=MYSQL;DB_CLOSE_DELAY=-1"

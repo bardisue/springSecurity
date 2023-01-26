@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
+
 @Entity
 @Table(name = "groups")
 public class Group {
@@ -33,7 +35,7 @@ public class Group {
     public List<GrantedAuthority> getAuthorities(){
         return permissions.stream()
                 .map(gp -> new SimpleGrantedAuthority(gp.getPermission().getName()))
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
     @Override
